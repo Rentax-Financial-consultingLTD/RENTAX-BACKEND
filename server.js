@@ -25,7 +25,6 @@ const cors = require("cors");
 const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
-const mongoSanitize = require("express-mongo-sanitize");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
@@ -360,12 +359,34 @@ app.use("/api/auth/login", authLimiter);
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
-// 6. MongoDB injection prevention
-app.use(
-  mongoSanitize({
-    replaceWith: "_",
-  }),
-);
+// 6. MongoDB injection prevention (Custom middleware - no package dependency)
+const sanitizeInput = (req, res, next) => {
+  const sanitize = (obj) => {
+    if (!obj || typeof obj !== "object") return obj;
+
+    for (let key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        if (typeof obj[key] === "string") {
+          obj[key] = obj[key].replace(/[${}]/g, "");
+        } else if (typeof obj[key] === "object" && obj[key] !== null) {
+          sanitize(obj[key]);
+        }
+        if (key.startsWith("$")) {
+          delete obj[key];
+        }
+      }
+    }
+    return obj;
+  };
+
+  if (req.body) req.body = sanitize(req.body);
+  if (req.query) req.query = sanitize(req.query);
+  if (req.params) req.params = sanitize(req.params);
+
+  next();
+};
+
+app.use(sanitizeInput);
 
 // 7. Request logging middleware
 app.use((req, res, next) => {
@@ -1704,7 +1725,7 @@ app.listen(PORT, () => {
   console.log("║                                                           ║");
   console.log("║          🚀 RENTAX Backend Server - MongoDB v2.0          ║");
   console.log("║                                                           ║");
-  console.log("╚═══════════════════════════════════════════════════════════╝");
+  console.log("╚══════════════════════════════════════════════════════════��╝");
   console.log("");
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
