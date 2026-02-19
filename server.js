@@ -71,6 +71,7 @@ const userSchema = new mongoose.Schema(
       enum: ["compliance", "tax", "accounts", "audit", "marketing", "legal"],
       required: true,
     },
+    phone: { type: String, default: "" },
     status: {
       type: String,
       enum: ["active", "inactive", "suspended"],
@@ -647,6 +648,26 @@ app.post(
         return res.status(400).json({ error: "All fields required" });
       }
 
+      // Name validation
+      if (name.trim().length < 2) {
+        return res
+          .status(400)
+          .json({ error: "Name must be at least 2 characters" });
+      }
+
+      // Email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: "Invalid email format" });
+      }
+
+      // Password validation
+      if (password.length < 6) {
+        return res
+          .status(400)
+          .json({ error: "Password must be at least 6 characters" });
+      }
+
       // Check if email exists
       const existingUser = await User.findOne({ email: email.toLowerCase() });
       if (existingUser) {
@@ -658,8 +679,8 @@ app.post(
 
       // Create user
       const newUser = new User({
-        email: email.toLowerCase(),
-        name,
+        email: email.toLowerCase().trim(),
+        name: name.trim(),
         role,
         department,
         password: hashedPassword,
@@ -687,6 +708,14 @@ app.post(
       res.status(201).json(userResponse);
     } catch (error) {
       console.error("Create user error:", error);
+
+      // Handle MongoDB validation errors
+      if (error.name === "ValidationError") {
+        return res
+          .status(400)
+          .json({ error: "Validation failed: " + error.message });
+      }
+
       res.status(500).json({ error: "Internal server error" });
     }
   },
@@ -700,9 +729,9 @@ app.put(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, role, department, status } = req.body;
+      const { name, role, department, status, phone } = req.body; // ✅ Receives data
 
-      const user = await User.findById(id);
+      const user = await User.findById(id); // ✅ Find user in MongoDB
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -710,7 +739,7 @@ app.put(
 
       const changes = [];
 
-      // Track changes
+      // ✅ Track and apply changes
       if (name && name !== user.name) {
         changes.push({ field: "name", oldValue: user.name, newValue: name });
         user.name = name;
@@ -739,17 +768,22 @@ app.put(
         user.status = status;
       }
 
-      await user.save();
+      if (phone !== undefined && phone !== user.phone) {
+        changes.push({ field: "phone", oldValue: user.phone, newValue: phone });
+        user.phone = phone;
+      }
 
-      // Log audit
+      await user.save(); // ✅ Save to MongoDB
+
+      // ✅ Log audit trail
       if (changes.length > 0) {
         await logAudit("user", id, "user_updated", req.user, changes);
       }
 
       const userResponse = user.toObject();
-      delete userResponse.password;
+      delete userResponse.password; // ✅ Remove password
 
-      res.json(userResponse);
+      res.json(userResponse); // ✅ Return updated user
     } catch (error) {
       console.error("Update user error:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -1725,7 +1759,7 @@ app.listen(PORT, () => {
   console.log("║                                                           ║");
   console.log("║          🚀 RENTAX Backend Server - MongoDB v2.0          ║");
   console.log("║                                                           ║");
-  console.log("╚══════════════════════════════════════════════════════════��╝");
+  console.log("╚══════════════════════════════════════════════════════════╝");
   console.log("");
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🌐 API Base URL: http://localhost:${PORT}/api`);
@@ -1742,7 +1776,7 @@ app.listen(PORT, () => {
   console.log("   ✓ Connection pooling (min: 2, max: 10)");
   console.log("   ✓ Database indexing");
   console.log("   ✓ Query optimization");
-  console.log("   ✓ Response compression");
+  console.log("    Response compression");
   console.log("");
   console.log("🔐 Default Users:");
   console.log("   - Super Admin: superadmin@rentax.com / admin123");
