@@ -677,7 +677,7 @@ app.post(
   requireRole("super_admin", "operational_manager"),
   async (req, res) => {
     try {
-      const { email, name, role, department, password } = req.body;
+      const { email, name, role, department, password, phone } = req.body;
 
       // Validation
       if (!email || !name || !role || !department || !password) {
@@ -720,6 +720,7 @@ app.post(
         role,
         department,
         password: hashedPassword,
+        phone: phone ? phone.trim() : "",
         status: "active",
       });
 
