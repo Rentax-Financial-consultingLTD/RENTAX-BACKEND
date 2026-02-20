@@ -366,7 +366,9 @@ const sanitizeInput = (req, res, next) => {
     if (!obj || typeof obj !== "object") return obj;
 
     for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      // ✅ FIX: Use Object.prototype.hasOwnProperty.call instead of obj.hasOwnProperty
+      // This prevents errors when obj doesn't have hasOwnProperty in its prototype chain
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         if (typeof obj[key] === "string") {
           obj[key] = obj[key].replace(/[${}]/g, "");
         } else if (typeof obj[key] === "object" && obj[key] !== null) {
@@ -605,11 +607,31 @@ app.get(
 
       const total = await User.countDocuments(query);
 
+      // Calculate statistics
+      const enterpriseRoles = [
+        "business_owner",
+        "business_manager",
+        "business_staff",
+      ];
+      const stats = {
+        total: await User.countDocuments(),
+        active: await User.countDocuments({ status: "active" }),
+        inactive: await User.countDocuments({ status: "inactive" }),
+        suspended: await User.countDocuments({ status: "suspended" }),
+        firmUsers: await User.countDocuments({
+          role: { $nin: enterpriseRoles },
+        }),
+        enterpriseUsers: await User.countDocuments({
+          role: { $in: enterpriseRoles },
+        }),
+      };
+
       res.json({
         users,
         total,
         page: parseInt(page),
         totalPages: Math.ceil(total / parseInt(limit)),
+        stats,
       });
     } catch (error) {
       console.error("Get users error:", error);
@@ -729,9 +751,9 @@ app.put(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const { name, role, department, status, phone } = req.body; // ✅ Receives data
+      const { name, role, department, status, phone } = req.body;
 
-      const user = await User.findById(id); // ✅ Find user in MongoDB
+      const user = await User.findById(id);
 
       if (!user) {
         return res.status(404).json({ error: "User not found" });
@@ -739,7 +761,7 @@ app.put(
 
       const changes = [];
 
-      // ✅ Track and apply changes
+      // Track changes
       if (name && name !== user.name) {
         changes.push({ field: "name", oldValue: user.name, newValue: name });
         user.name = name;
@@ -773,17 +795,17 @@ app.put(
         user.phone = phone;
       }
 
-      await user.save(); // ✅ Save to MongoDB
+      await user.save();
 
-      // ✅ Log audit trail
+      // Log audit
       if (changes.length > 0) {
         await logAudit("user", id, "user_updated", req.user, changes);
       }
 
       const userResponse = user.toObject();
-      delete userResponse.password; // ✅ Remove password
+      delete userResponse.password;
 
-      res.json(userResponse); // ✅ Return updated user
+      res.json(userResponse);
     } catch (error) {
       console.error("Update user error:", error);
       res.status(500).json({ error: "Internal server error" });
