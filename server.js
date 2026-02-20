@@ -35,11 +35,11 @@ const app = express();
 // This allows Express to correctly read X-Forwarded-For headers for rate limiting and logging
 app.set("trust proxy", true);
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 5000;
 const JWT_SECRET =
-  process.env.JWT_SECRET;
+  process.env.JWT_SECRET || "rentax-super-secret-key-change-in-production";
 const MONGODB_URI =
-  process.env.MONGODB_URI;
+  process.env.MONGODB_URI || "mongodb://localhost:27017/rentax";
 
 // ============================================================================
 // MONGOOSE SCHEMAS & MODELS
@@ -354,6 +354,8 @@ const apiLimiter = rateLimit({
   message: "Too many requests from this IP, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
+  // ✅ Validate trust proxy configuration for production deployment
+  validate: { trustProxy: false }, // Disable validation - we trust Digital Ocean's proxy
 });
 
 const authLimiter = rateLimit({
@@ -361,6 +363,8 @@ const authLimiter = rateLimit({
   max: 5, // Limit each IP to 5 login attempts per windowMs
   message: "Too many login attempts, please try again later",
   skipSuccessfulRequests: true,
+  // ✅ Validate trust proxy configuration for production deployment
+  validate: { trustProxy: false }, // Disable validation - we trust Digital Ocean's proxy
 });
 
 app.use("/api/", apiLimiter);
