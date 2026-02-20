@@ -82,8 +82,7 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Index for faster queries
-userSchema.index({ email: 1 });
+// Index for faster queries (email index automatically created by unique: true)
 userSchema.index({ role: 1 });
 userSchema.index({ department: 1 });
 userSchema.index({ status: 1 });
@@ -120,12 +119,11 @@ const clientSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-// Indexes for performance
+// Indexes for performance (tenantId index automatically created by unique: true)
 clientSchema.index({ email: 1 });
 clientSchema.index({ package: 1 });
 clientSchema.index({ serviceType: 1 });
 clientSchema.index({ status: 1 });
-clientSchema.index({ tenantId: 1 });
 
 const Client = mongoose.model("Client", clientSchema);
 
@@ -181,7 +179,7 @@ const departmentSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-departmentSchema.index({ code: 1 });
+// Indexes for performance (code index automatically created by unique: true)
 
 const Department = mongoose.model("Department", departmentSchema);
 
@@ -196,7 +194,7 @@ const systemSettingsSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-systemSettingsSchema.index({ settingKey: 1 });
+// Indexes for performance (settingKey index automatically created by unique: true)
 
 const SystemSettings = mongoose.model("SystemSettings", systemSettingsSchema);
 
