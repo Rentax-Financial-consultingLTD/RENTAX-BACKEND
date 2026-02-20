@@ -248,8 +248,11 @@ mongoose
     maxPoolSize: 10, // Maximum number of connections in the pool
     minPoolSize: 2, // Minimum number of connections
     socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-    serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+    serverSelectionTimeoutMS: 30000, // ✅ Increased to 30s for Digital Ocean
+    connectTimeoutMS: 30000, // ✅ Added: Connection timeout
     family: 4, // Use IPv4, skip trying IPv6
+    retryWrites: true, // ✅ Added: Retry failed writes
+    retryReads: true, // ✅ Added: Retry failed reads
   })
   .then(() => {
     console.log("✅ MongoDB connected successfully with connection pooling");
@@ -257,6 +260,10 @@ mongoose
   })
   .catch((err) => {
     console.error("❌ MongoDB connection error:", err);
+    console.error("   Please check:");
+    console.error("   1. MONGODB_URI environment variable is set");
+    console.error("   2. MongoDB trusted sources include this server");
+    console.error("   3. Connection string includes replicaSet parameter");
     process.exit(1);
   });
 
