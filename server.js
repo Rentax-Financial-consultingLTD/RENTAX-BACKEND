@@ -30,11 +30,16 @@ const jwt = require("jsonwebtoken");
 
 // Initialize Express
 const app = express();
-const PORT = process.env.PORT || 5000;
+
+// ✅ Trust proxy - Required for Digital Ocean App Platform and other reverse proxies
+// This allows Express to correctly read X-Forwarded-For headers for rate limiting and logging
+app.set("trust proxy", true);
+
+const PORT = process.env.PORT;
 const JWT_SECRET =
-  process.env.JWT_SECRET || "rentax-super-secret-key-change-in-production";
+  process.env.JWT_SECRET;
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/rentax";
+  process.env.MONGODB_URI;
 
 // ============================================================================
 // MONGOOSE SCHEMAS & MODELS
